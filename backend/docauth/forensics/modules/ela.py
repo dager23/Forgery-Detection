@@ -12,7 +12,7 @@ import math
 import cv2
 import numpy as np
 
-from docauth.forensics.modules.base import AnalysisContext, Module
+from docauth.forensics.modules.base import WEAK, AnalysisContext, Module
 from docauth.forensics.types import Artifact, Document, Finding, ModuleResult, Page
 from docauth.forensics.util import (
     block_reduce,
@@ -77,7 +77,11 @@ class ElaModule(Module):
         res.metrics["evidence"] = round(best_x, 4)
         res.suspicion = self.calibrated(ctx, best_x, center=2.2, slope=2.2)
         res.confidence = float(np.mean(confs)) if confs else 0.0
-        if res.boxes:
+        if res.boxes and res.suspicion < WEAK:
+            res.summary = (
+                f"Error levels are broadly uniform ({len(res.boxes)} weak local variation(s))."
+            )
+        elif res.boxes:
             res.findings.append(
                 Finding(
                     "medium" if res.suspicion > 0.5 else "low",

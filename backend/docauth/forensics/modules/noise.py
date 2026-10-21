@@ -14,7 +14,7 @@ import math
 import cv2
 import numpy as np
 
-from docauth.forensics.modules.base import AnalysisContext, Module
+from docauth.forensics.modules.base import WEAK, AnalysisContext, Module
 from docauth.forensics.types import Artifact, Document, Finding, ModuleResult, Page
 from docauth.forensics.util import block_reduce, heatmap_overlay, mask_to_boxes, upsample_blocks
 
@@ -70,7 +70,9 @@ class NoiseModule(Module):
         res.confidence = float(np.mean(confs)) if confs else 0.0
         if any(b.label.startswith("uniform") for b in res.boxes):
             res.suspicion = max(res.suspicion, 0.6)
-        if res.boxes:
+        if res.boxes and res.suspicion < WEAK:
+            res.summary = f"Noise is broadly consistent ({len(res.boxes)} weak local variation(s))."
+        elif res.boxes:
             res.findings.append(
                 Finding(
                     "medium" if res.suspicion > 0.5 else "low",

@@ -172,6 +172,7 @@ class SynthDoc:
     seal_box: tuple[int, int, int, int] | None = None
     signature_box: tuple[int, int, int, int] | None = None
     body_font: str | None = None
+    issuer: str = ""
 
     def variable_regions(self, pad: int = 6) -> list[dict[str, float]]:
         """Normalised boxes of fields that differ between genuine copies (for templates)."""
@@ -349,7 +350,9 @@ def render_document(
     text((sig_x, sig_y + 110), "Authorised Signatory", fsig, ink)
 
     bgr = cv2.cvtColor(np.asarray(img), cv2.COLOR_RGB2BGR)
-    return SynthDoc(bgr, doc_type, layout_seed, fields, words, seal_box, signature_box, f_body)
+    return SynthDoc(
+        bgr, doc_type, layout_seed, fields, words, seal_box, signature_box, f_body, state.title()
+    )
 
 
 def scan_effects(img: np.ndarray, rng: random.Random, strength: float = 1.0) -> np.ndarray:

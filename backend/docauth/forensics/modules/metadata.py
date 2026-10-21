@@ -371,7 +371,7 @@ def estimate_jpeg_quality(qtables: dict[int, list[int]]) -> int | None:
 
 
 def _analyse_pdf(doc: Document, res: ModuleResult) -> None:
-    import fitz
+    import pymupdf as fitz
 
     res.confidence = 0.9
     pdf = fitz.open(stream=doc.data, filetype="pdf")
@@ -456,7 +456,7 @@ def _font_family(name: str) -> str:
 
 
 def _pdf_page_checks(page, pno: int, sx: float, sy: float, res: ModuleResult) -> None:
-    import fitz
+    import pymupdf as fitz
 
     def box(rect, label: str, score: float = 1.0) -> Box:
         return Box(

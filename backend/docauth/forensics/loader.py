@@ -101,7 +101,7 @@ def load_image_document(data: bytes, filename: str, mime: str) -> Document:
 
 
 def load_pdf_document(data: bytes, filename: str, max_pages: int = 10) -> Document:
-    import fitz  # PyMuPDF
+    import pymupdf as fitz
 
     try:
         pdf = fitz.open(stream=data, filetype="pdf")

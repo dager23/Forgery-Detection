@@ -4,8 +4,8 @@ import io
 import random
 
 import cv2
-import fitz
 import numpy as np
+import pymupdf as fitz
 import pytest
 from PIL import Image
 

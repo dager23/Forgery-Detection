@@ -143,9 +143,7 @@ def build_report(analysis: dict[str, Any], adir: Path) -> bytes:
     story += [banner, Spacer(1, 6), Paragraph(_esc(result.get("summary", "")), body)]
 
     story.append(Paragraph("Module results", h2))
-    rows = [
-        [Paragraph(f"<b>{h}</b>", cell) for h in ("Module", "Score /10", "Confidence", "Finding")]
-    ]
+    rows = [[Paragraph(f"<b>{h}</b>", cell) for h in ("Module", "Score /10", "Conf.", "Finding")]]
     for m in result.get("modules", []):
         score = "-" if m["status"] != "ok" else f"{m['score10']:.1f}"
         conf = "-" if m["status"] != "ok" else f"{m['confidence'] * 100:.0f}%"

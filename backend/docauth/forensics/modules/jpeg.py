@@ -17,7 +17,7 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from docauth.forensics.modules.base import AnalysisContext, Module
+from docauth.forensics.modules.base import WEAK, AnalysisContext, Module
 from docauth.forensics.modules.metadata import estimate_jpeg_quality
 from docauth.forensics.types import Artifact, Box, Document, Finding, ModuleResult, Page
 from docauth.forensics.util import (
@@ -142,7 +142,12 @@ class JpegModule(Module):
         res.metrics["evidence"] = round(best_x, 4)
         res.suspicion = self.calibrated(ctx, best_x, center=2.3, slope=2.0)
         res.confidence = float(np.mean(confs))
-        if res.boxes:
+        if res.boxes and res.suspicion < WEAK:
+            res.summary = (
+                f"Compression history is broadly consistent ({len(res.boxes)} weak local "
+                "variation(s))."
+            )
+        elif res.boxes:
             res.findings.append(
                 Finding(
                     "medium" if res.suspicion > 0.5 else "low",

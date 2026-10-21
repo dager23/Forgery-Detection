@@ -8,6 +8,9 @@ from typing import Any
 
 from docauth.forensics.types import Document, ModuleResult, TemplateRef
 
+# Below this suspicion a module's regions are reported as weak variations, not findings
+WEAK = 0.35
+
 
 @dataclass
 class AnalysisContext:

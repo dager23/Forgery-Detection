@@ -111,7 +111,7 @@ def _seed_demo(a: argparse.Namespace) -> int:
     with db.session() as s:
         for k, layout in enumerate((11, 23, 37)):
             ref = synth.render_document(seed=layout * 7, layout_seed=layout)
-            name = f"{ref.doc_type.title()} (demo)"
+            name = f"{ref.doc_type.title()} - {ref.issuer} (demo)"
             if s.scalar(select(Template).where(Template.name == name)) is None:
                 fname = f"demo_{layout}.png"
                 cv2.imwrite(str(settings.templates_dir / fname), ref.image)
