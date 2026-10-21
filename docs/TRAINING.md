@@ -26,7 +26,7 @@ Everything lives under `data/` (git-ignored). Any source that is missing is skip
 
 | Source | Where to put it | Notes |
 |---|---|---|
-| Synthetic certificates | generated: `python ml/generate_synthetic.py` | 5 000 train / 600 val; text replacement, copy-move, splicing, erasure, inserted text, with pixel masks |
+| Synthetic certificates | generated: `python ml/generate_synthetic.py --test 400` | 5 000 train / 600 val / 400 test (untouched until final evaluation); text replacement, copy-move, splicing, erasure, inserted text, with pixel masks |
 | **CASIA v2.0** | `data/datasets/CASIA2/` | Kaggle `divg07/casia-20-image-tampering-detection-dataset`. The loader searches recursively for `Au/`, `Tp/` and a `*Groundtruth*` folder of `*_gt.png` masks |
 | **DocTamper** | `data/datasets/DocTamper/` | From github.com/qcf-568/DocTamper. Keep the LMDB folders (`DocTamperV1-TrainingSet`, `-TestingSet`, `-FCD`, `-SCD`, each with `data.mdb`). Research use only - check its licence |
 
@@ -72,7 +72,7 @@ on restart; use **Re-run** on an analysis to re-score it.
 ## 5. Calibrate and evaluate the whole engine
 
 ```bash
-python ml/evaluate_engine.py --sources synthetic,casia2,doctamper --n 300 --calibrate
+python ml/evaluate_engine.py --sources synthetic,casia2,doctamper --split test --n 400 --calibrate
 ```
 
 This runs the real engine (all modules) on validation images and, with `--calibrate`, fits on

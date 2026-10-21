@@ -49,20 +49,19 @@ class SRMPatchNet(nn.Module):
         super().__init__()
         self.srm = SRMConv()
         w = width
+        # the SRM residuals are dense, so the first conv can stride: ~4x fewer FLOPs than
+        # full-resolution blocks, which matters for CPU inference over hundreds of patches
         self.features = nn.Sequential(
-            conv_bn(30, w),
+            conv_bn(30, w, s=2),  # 64
             conv_bn(w, w),
-            nn.MaxPool2d(2),  # 64
+            nn.MaxPool2d(2),  # 32
             conv_bn(w, 2 * w),
             conv_bn(2 * w, 2 * w),
-            nn.MaxPool2d(2),  # 32
+            nn.MaxPool2d(2),  # 16
             conv_bn(2 * w, 4 * w),
             conv_bn(4 * w, 4 * w),
-            nn.MaxPool2d(2),  # 16
-            conv_bn(4 * w, 8 * w),
-            conv_bn(8 * w, 8 * w),
             nn.MaxPool2d(2),  # 8
-            conv_bn(8 * w, 8 * w),
+            conv_bn(4 * w, 8 * w),
         )
         self.head = nn.Sequential(nn.Dropout(dropout), nn.Linear(8 * w, 2))
 

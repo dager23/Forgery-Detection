@@ -349,7 +349,9 @@ def build_sources(names: list[str], split: str, data_root: Path, doctamper_limit
             if n == "synthetic":
                 out.append(SyntheticSource(data_root / "synthetic", split))
             elif n == "casia2":
-                out.append(Casia2Source(data_root / "datasets" / "CASIA2", split))
+                # CASIA has no official test split: "test" falls back to the held-out val hash
+                casia_split = "train" if split == "train" else "val"
+                out.append(Casia2Source(data_root / "datasets" / "CASIA2", casia_split))
             elif n == "doctamper":
                 base = data_root / "datasets" / "DocTamper"
                 sub = "DocTamperV1-TrainingSet" if split == "train" else "DocTamperV1-TestingSet"

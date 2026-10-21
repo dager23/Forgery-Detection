@@ -9,7 +9,7 @@ from docauth.forensics.deep import PATCH, SEG_OVERLAP, SEG_TILE
 from docauth.forensics.deep import runtime as rt
 from docauth.forensics.modules.base import AnalysisContext, Module
 from docauth.forensics.types import Artifact, Document, Finding, ModuleResult, Page
-from docauth.forensics.util import heatmap_overlay, mask_to_boxes
+from docauth.forensics.util import document_likeness, heatmap_overlay, mask_to_boxes
 
 MAX_PATCHES = 400
 BATCH = 64
@@ -29,6 +29,20 @@ class _OnnxModule(Module):
 
     def info(self) -> dict:
         return rt.model_info(self.model_name)
+
+    def domain_factor(self, doc: Document, info: dict) -> float:
+        """Confidence multiplier: document-only models are unreliable on photos."""
+        trained_on = set(info.get("trained_on", []))
+        if info.get("domain") == "general" or "casia2" in trained_on:
+            return 1.0
+        likeness = min(document_likeness(p.image) for p in doc.pages)
+        return 0.15 + 0.85 * likeness
+
+    @staticmethod
+    def domain_note(factor: float) -> str:
+        if factor >= 0.6:
+            return ""
+        return " Low confidence: the model was trained on documents and this looks like a photo."
 
 
 class CnnClassifierModule(_OnnxModule):
@@ -59,10 +73,12 @@ class CnnClassifierModule(_OnnxModule):
         res.confidence = float(info.get("confidence", 0.75))
         if any(p.resampled for p in doc.pages):
             res.confidence *= 0.7
+        factor = self.domain_factor(doc, info)
+        res.confidence *= factor
         label = "manipulated" if p_fake >= thr else "authentic"
         res.summary = (
             f"Network output: real {100 * (1 - p_fake):.0f}% / fake {100 * p_fake:.0f}% -> {label}."
-        )
+        ) + self.domain_note(factor)
         if p_fake >= thr:
             res.findings.append(
                 Finding(
@@ -164,8 +180,11 @@ class SegmentationModule(_OnnxModule):
         res.confidence = float(info.get("confidence", 0.75))
         if any(p.resampled for p in doc.pages):
             res.confidence *= 0.7
+        factor = self.domain_factor(doc, info)
+        res.confidence *= factor
         res.summary = f"{worst_pct:.2f}% of pixels predicted as manipulated."
-        if res.boxes:
+        res.summary += self.domain_note(factor)
+        if res.boxes and factor >= 0.6:
             res.findings.append(
                 Finding(
                     "high" if res.suspicion > 0.75 else "medium",

@@ -45,8 +45,9 @@ export default function DocumentViewer({
   const boxes = useMemo(
     () =>
       modules
-        // by default only modules with meaningful evidence draw boxes; focusing shows all of one
-        .filter((m) => m.status === "ok" && (focus ? m.key === focus : m.suspicion >= 0.35))
+        // by default only modules with meaningful, reliable evidence draw boxes; focusing shows
+        // every box of one module
+        .filter((m) => m.status === "ok" && (focus ? m.key === focus : m.suspicion * m.confidence >= 0.25))
         .flatMap((m) => m.boxes.filter((b) => b.page === page.index).map((b) => ({ ...b, module: m.key }))),
     [modules, page.index, focus],
   );

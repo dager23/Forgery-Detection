@@ -201,3 +201,14 @@ def downscale_for(image: np.ndarray, max_side: int) -> tuple[np.ndarray, float]:
         return image, 1.0
     f = max_side / s
     return cv2.resize(image, (round(w * f), round(h * f)), interpolation=cv2.INTER_AREA), f
+
+
+def document_likeness(image: np.ndarray) -> float:
+    """0..1 estimate of how much a page looks like a document (light, unsaturated paper).
+
+    Used to down-weight models trained only on documents when they see photos.
+    """
+    small, _ = downscale_for(image, 512)
+    hsv = cv2.cvtColor(small, cv2.COLOR_BGR2HSV)
+    paper = (hsv[:, :, 2] > 185) & (hsv[:, :, 1] < 45)
+    return float(np.clip((paper.mean() - 0.25) / 0.35, 0.0, 1.0))

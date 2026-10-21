@@ -208,3 +208,11 @@ def test_large_images_are_downscaled():
     doc = load_document(cv2.imencode(".png", big)[1].tobytes(), "big.png")
     assert max(doc.pages[0].shape) == 4096 and doc.pages[0].resampled
     assert doc.notes
+
+
+def test_document_likeness_separates_documents_from_photos():
+    from docauth.forensics.util import document_likeness
+
+    page = synth.scan_effects(synth.render_document(seed=3).image, random.Random(0))
+    assert document_likeness(page) > 0.8
+    assert document_likeness(synth.natural_image(5)) < 0.2

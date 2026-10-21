@@ -61,10 +61,16 @@ def main() -> None:
     ap.add_argument("--out", type=Path, default=ROOT / "data" / "synthetic")
     ap.add_argument("--train", type=int, default=5000)
     ap.add_argument("--val", type=int, default=600)
+    ap.add_argument("--test", type=int, default=0, help="untouched split for final evaluation")
     ap.add_argument("--workers", type=int, default=6)
     a = ap.parse_args()
-    generate(a.out / "train", a.train, 1_000_000, a.workers)
-    generate(a.out / "val", a.val, 9_000_000, a.workers)
+    for split, n, seed0 in (
+        ("train", a.train, 1_000_000),
+        ("val", a.val, 9_000_000),
+        ("test", a.test, 20_000_000),
+    ):
+        if n > 0:
+            generate(a.out / split, n, seed0, a.workers)
 
 
 if __name__ == "__main__":

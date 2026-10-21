@@ -71,11 +71,11 @@ def _run(task):
     }
 
 
-def collect(names: list[str], n: int, seed: int) -> list[tuple]:
-    """Balanced samples from each source's validation split, encoded as JPEG bytes."""
+def collect(names: list[str], n: int, seed: int, split: str = "val") -> list[tuple]:
+    """Balanced samples from each source's split, keeping the original file encoding."""
     rng = random.Random(seed)
     tasks = []
-    for src in build_sources(names, "val", DATA_ROOT):
+    for src in build_sources(names, split, DATA_ROOT):
         idx = list(range(len(src)))
         rng.shuffle(idx)
         pos, neg = [], []
@@ -246,9 +246,11 @@ def main() -> None:
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--calibrate", action="store_true")
     ap.add_argument("--seed", type=int, default=7)
+    ap.add_argument("--split", default="val", help="val, or test for an untouched split")
     a = ap.parse_args()
 
-    tasks = collect([s.strip() for s in a.sources.split(",") if s.strip()], a.n, a.seed)
+    names = [s.strip() for s in a.sources.split(",") if s.strip()]
+    tasks = collect(names, a.n, a.seed, a.split)
     if not tasks:
         raise SystemExit("No labelled samples found.")
     rows = run_engine(tasks, a.workers, calibration_off=a.calibrate)

@@ -119,6 +119,8 @@ def main() -> None:
         "threshold": round(float(thr), 4),
         "confidence": 0.75,
         "trained_on": meta.get("sources", []),
+        # models that never saw natural photos are down-weighted on them by the engine
+        "domain": "general" if "casia2" in meta.get("sources", []) else "documents",
         "epoch": meta.get("epoch"),
         "val_metrics": metrics,
         "exported_at": datetime.now(UTC).isoformat(timespec="seconds"),

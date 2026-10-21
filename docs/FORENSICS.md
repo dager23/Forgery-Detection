@@ -95,4 +95,8 @@ resolution with 8-aligned origins so compression traces are preserved.
 * The networks are only as good as their training data. Models trained on the synthetic set
   alone will generalise less well to real forgeries than models trained with CASIA v2 and
   DocTamper - check `docs/EVALUATION.md` and the model sidecar `trained_on` field.
+* A network that has only seen documents (`"domain": "documents"` in its sidecar) is unreliable
+  on natural photos - the synthetic-only segmenter flags clean photos. The engine therefore
+  scales its confidence by how document-like the page is (light, unsaturated paper) and says so
+  in the module summary; training with CASIA v2 removes this restriction.
 * A verdict is forensic evidence, not proof: confirm critical cases with the issuing authority.
