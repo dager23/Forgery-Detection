@@ -54,7 +54,7 @@ class CnnClassifierModule(_OnnxModule):
             {"p_fake": round(p_fake, 4), "threshold": thr, "model": info.get("version", "unknown")}
         )
         # recentre so the model's own operating threshold maps to suspicion 0.5
-        res.suspicion = float(self.calibrated(ctx, p_fake, center=thr, slope=10.0))
+        res.suspicion = float(self.calibrated(ctx, p_fake, center=thr))
         res.metrics["evidence"] = round(p_fake, 4)
         res.confidence = float(info.get("confidence", 0.75))
         if any(p.resampled for p in doc.pages):
@@ -155,9 +155,12 @@ class SegmentationModule(_OnnxModule):
                 "model": info.get("version", "unknown"),
             }
         )
-        x = worst_peak * min(1.0, 0.35 + worst_pct / 2.0)
+        # evidence = confidence of the strongest localised region (a forged value can be 0.1 %
+        # of a page, so area must not dilute it); isolated hot pixels without a region count half
+        region_peak = max((b.score for b in res.boxes), default=0.0)
+        x = region_peak if res.boxes else 0.5 * worst_peak
         res.metrics["evidence"] = round(x, 4)
-        res.suspicion = float(self.calibrated(ctx, x, center=thr * 0.8, slope=9.0))
+        res.suspicion = float(self.calibrated(ctx, x, center=thr * 0.8))
         res.confidence = float(info.get("confidence", 0.75))
         if any(p.resampled for p in doc.pages):
             res.confidence *= 0.7

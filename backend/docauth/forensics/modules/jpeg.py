@@ -140,7 +140,7 @@ class JpegModule(Module):
             res.summary = "No JPEG compression traces; compression analysis does not apply."
             return res
         res.metrics["evidence"] = round(best_x, 4)
-        res.suspicion = self.calibrated(ctx, best_x, center=2.3, slope=2.0)
+        res.suspicion = self.calibrated(ctx, best_x)
         res.confidence = float(np.mean(confs))
         if res.boxes and res.suspicion < WEAK:
             res.summary = (

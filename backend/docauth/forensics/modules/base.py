@@ -11,6 +11,19 @@ from docauth.forensics.types import Document, ModuleResult, TemplateRef
 # Below this suspicion a module's regions are reported as weak variations, not findings
 WEAK = 0.35
 
+# Default evidence -> suspicion curves: suspicion = logistic(slope * (evidence - center)).
+# ``ml/evaluate_engine.py`` refits the centres on labelled data (calibration.json); a centre of
+# None means the module derives it at run time (the deep models use their own threshold).
+CURVES: dict[str, tuple[float | None, float]] = {
+    "ela": (2.2, 2.2),
+    "noise": (2.4, 2.0),
+    "jpeg": (2.3, 2.0),
+    "copymove": (3.0, 3.0),
+    "template": (1.0, 3.0),
+    "cnn": (None, 10.0),
+    "segmentation": (None, 9.0),
+}
+
 
 @dataclass
 class AnalysisContext:
@@ -44,7 +57,9 @@ class Module:
         z = max(-60.0, min(60.0, slope * (x - center)))
         return 1.0 / (1.0 + math.exp(-z))
 
-    def calibrated(self, ctx: AnalysisContext, x: float, center: float, slope: float) -> float:
+    def calibrated(self, ctx: AnalysisContext, x: float, center: float | None = None) -> float:
         """Map a raw module metric to suspicion, using fitted parameters when available."""
+        default_center, slope = CURVES[self.key]
         params = ctx.calibration.get("modules", {}).get(self.key, {})
-        return self.logistic(x, params.get("center", center), params.get("slope", slope))
+        c = params.get("center", center if center is not None else default_center)
+        return self.logistic(x, c, params.get("slope", slope))

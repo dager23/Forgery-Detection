@@ -34,3 +34,10 @@ ml/cache/
 Thumbs.db
 .idea/
 .vscode/
+
+# Local tooling
+.claude/
+
+# Python build outputs
+build/
+dist/

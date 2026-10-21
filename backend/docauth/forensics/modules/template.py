@@ -238,7 +238,7 @@ class TemplateModule(Module):
             else (math.log1p(stats["changed_pct"] * 2))
         )
         res.metrics["evidence"] = round(x, 4)
-        res.suspicion = self.calibrated(ctx, x, center=1.0, slope=3.0)
+        res.suspicion = self.calibrated(ctx, x)
         res.confidence = float(np.clip(0.5 + al["ratio"] * 0.6, 0.5, 0.95))
         if regions:
             kinds = {}

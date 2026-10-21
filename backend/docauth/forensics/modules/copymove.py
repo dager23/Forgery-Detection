@@ -159,7 +159,7 @@ class CopyMoveModule(Module):
         res.metrics["max_inliers"] = best
         x = float(np.log1p(best)) if best else 0.0
         res.metrics["evidence"] = round(x, 4)
-        res.suspicion = self.calibrated(ctx, x, center=3.0, slope=3.0) if best else 0.0
+        res.suspicion = self.calibrated(ctx, x) if best else 0.0
         res.confidence = 0.8
         if best:
             res.summary = res.findings[-1].message

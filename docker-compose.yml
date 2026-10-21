@@ -1,0 +1,17 @@
+services:
+  docauth:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DOCAUTH_SECRET_KEY: ${DOCAUTH_SECRET_KEY:?set DOCAUTH_SECRET_KEY to a long random string}
+      DOCAUTH_ADMIN_EMAIL: ${DOCAUTH_ADMIN_EMAIL:-admin@example.com}
+      DOCAUTH_ADMIN_PASSWORD: ${DOCAUTH_ADMIN_PASSWORD:?set DOCAUTH_ADMIN_PASSWORD}
+      # set to "true" once the app is served over HTTPS (e.g. behind a reverse proxy)
+      DOCAUTH_COOKIE_SECURE: ${DOCAUTH_COOKIE_SECURE:-false}
+    volumes:
+      - docauth-data:/data
+    restart: unless-stopped
+
+volumes:
+  docauth-data:

@@ -75,7 +75,7 @@ class ElaModule(Module):
             best_x = max(best_x, x)
             confs.append(conf)
         res.metrics["evidence"] = round(best_x, 4)
-        res.suspicion = self.calibrated(ctx, best_x, center=2.2, slope=2.2)
+        res.suspicion = self.calibrated(ctx, best_x)
         res.confidence = float(np.mean(confs)) if confs else 0.0
         if res.boxes and res.suspicion < WEAK:
             res.summary = (

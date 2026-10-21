@@ -66,7 +66,7 @@ class NoiseModule(Module):
             best_x = max(best_x, x)
             confs.append(conf)
         res.metrics["evidence"] = round(best_x, 4)
-        res.suspicion = self.calibrated(ctx, best_x, center=2.4, slope=2.0)
+        res.suspicion = self.calibrated(ctx, best_x)
         res.confidence = float(np.mean(confs)) if confs else 0.0
         if any(b.label.startswith("uniform") for b in res.boxes):
             res.suspicion = max(res.suspicion, 0.6)
