@@ -67,7 +67,8 @@ def test_admin_sees_all(client, user_token, admin_token, natural_jpeg):
     wait_done(client, aid, bearer(user_token))
     assert client.get(f"/api/analyses/{aid}", headers=bearer(admin_token)).status_code == 200
     page = client.get("/api/analyses?scope=all", headers=bearer(admin_token)).json()
-    assert any(i["id"] == aid for i in page["items"])
+    row = next(i for i in page["items"] if i["id"] == aid)
+    assert row["owner_name"] == "Tester"
 
 
 def test_rejects_bad_uploads(client, user_token):

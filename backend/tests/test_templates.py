@@ -3,6 +3,7 @@ import json
 import random
 
 import cv2
+import numpy as np
 from conftest import bearer, wait_done
 
 from docauth import synth
@@ -43,6 +44,9 @@ def test_template_crud_and_permissions(client, admin_token, user_token):
     assert (
         client.get(f"/api/templates/{t['id']}/image", headers=bearer(user_token)).status_code == 200
     )
+    thumb = client.get(f"/api/templates/{t['id']}/image?size=thumb", headers=bearer(user_token))
+    assert thumb.status_code == 200 and thumb.headers["content-type"] == "image/jpeg"
+    assert cv2.imdecode(np.frombuffer(thumb.content, np.uint8), cv2.IMREAD_COLOR).shape[1] == 480
     r = client.patch(
         f"/api/templates/{t['id']}",
         json={"ignore_regions": [{"x": 0.1, "y": 0.1, "w": 0.2, "h": 0.05}]},

@@ -288,41 +288,57 @@ class SegDataset(Dataset):
 
 
 class PatchDataset(Dataset):
-    """Balanced 128x128 patches: tampered patches overlap the mask boundary region."""
+    """Groups of 128x128 patches cut from one decoded image (decoding is the bottleneck).
 
-    def __init__(self, sources, patch=128, length=40000, weights=None, train=True, seed=0):
+    Odd indices draw a tampered image: 3/4 of its patches overlap the mask, 1/4 come from its
+    untouched area (hard negatives with the same compression history). Even indices draw a
+    genuine image (all negatives). Each item is ([k, 3, P, P], [k]); flatten in the loop.
+    """
+
+    def __init__(
+        self, sources, patch=128, length=4000, weights=None, train=True, seed=0, per_image=8
+    ):
         self.mix = _Mixture(sources, weights)
         self.patch, self.length, self.train, self.seed = patch, length, train, seed
+        self.k = per_image
 
     def __len__(self) -> int:
         return self.length
 
-    def __getitem__(self, i: int):
-        rng = random.Random(i + self.seed * 1_000_003 if not self.train else None)
-        want_pos = i % 2 == 1
-        for _ in range(30):
-            item = self.mix.sample(rng)
-            img = item.image
-            mask = item.mask if item.mask is not None else np.zeros(img.shape[:2], np.uint8)
-            if want_pos and not (item.label == 1 and mask.any()):
-                continue
-            if not want_pos and item.label == 1 and not mask.any():
-                continue  # tampered somewhere unknown: can't pick a clean patch safely
-            if self.train:
-                img = recompress(img, rng, p=0.3, qmin=75)
-            crop, cm = aligned_crop(img, mask, self.patch, rng, focus=want_pos)
+    def _patch(self, img, mask, rng, positive: bool):
+        for _ in range(12):
+            crop, cm = aligned_crop(img, mask, self.patch, rng, focus=positive)
             cover = float(cm.mean())
-            if want_pos and cover < 0.08:
-                continue
-            if not want_pos and cover > 0:
+            if (positive and cover < 0.08) or (not positive and cover > 0):
                 continue
             if cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY).std() < 3:
                 continue  # flat patch carries no signal (inference skips these too)
             if self.train:
                 crop, cm = flip_rot(crop, cm, rng)
-            return to_tensor(crop), torch.tensor(int(want_pos))
-        crop = np.full((self.patch, self.patch, 3), 128, np.uint8)
-        return to_tensor(crop), torch.tensor(0)
+            return to_tensor(crop)
+        return None
+
+    def __getitem__(self, i: int):
+        rng = random.Random(i + self.seed * 1_000_003 if not self.train else None)
+        tampered = i % 2 == 1
+        for _ in range(30):
+            item = self.mix.sample(rng)
+            mask = item.mask if item.mask is not None else np.zeros(item.image.shape[:2], np.uint8)
+            if tampered != (item.label == 1) or (tampered and not mask.any()):
+                continue  # need a tampered image *with* a mask, or a genuine one
+            img = recompress(item.image, rng, p=0.3, qmin=75) if self.train else item.image
+            n_pos = (3 * self.k) // 4 if tampered else 0
+            xs, ys = [], []
+            for j in range(self.k):
+                positive = j < n_pos
+                t = self._patch(img, mask, rng, positive)
+                if t is not None:
+                    xs.append(t)
+                    ys.append(int(positive))
+            if len(xs) == self.k:
+                return torch.stack(xs), torch.tensor(ys)
+        blank = to_tensor(np.full((self.patch, self.patch, 3), 128, np.uint8))
+        return blank.repeat(self.k, 1, 1, 1), torch.zeros(self.k, dtype=torch.long)
 
 
 def build_sources(names: list[str], split: str, data_root: Path, doctamper_limit: int = 30000):

@@ -126,7 +126,14 @@ def list_analyses(
         stmt = stmt.where(Analysis.filename.ilike(f"%{q}%"))
     total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
     rows = db.scalars(stmt.order_by(Analysis.created_at.desc()).limit(limit).offset(offset)).all()
-    return AnalysisPage(items=[AnalysisSummary.model_validate(r) for r in rows], total=total)
+    names = dict(
+        db.execute(select(User.id, User.name).where(User.id.in_({r.user_id for r in rows}))).all()
+    )
+    items = [
+        AnalysisSummary.model_validate(r).model_copy(update={"owner_name": names.get(r.user_id)})
+        for r in rows
+    ]
+    return AnalysisPage(items=items, total=total)
 
 
 @router.get("/stats", response_model=Stats)

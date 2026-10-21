@@ -113,6 +113,7 @@ class AnalysisSummary(BaseModel):
     completed_at: datetime | None
     duration_ms: int | None
     user_id: int
+    owner_name: str | None = None
 
 
 class AnalysisOut(AnalysisSummary):
@@ -120,7 +121,6 @@ class AnalysisOut(AnalysisSummary):
     error: str | None
     result: dict[str, Any] | None
     template_name: str | None = None
-    owner_name: str | None = None
 
 
 class AnalysisPage(BaseModel):

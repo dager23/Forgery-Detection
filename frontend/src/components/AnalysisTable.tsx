@@ -40,7 +40,7 @@ export default function AnalysisTable({ items, showOwner }: { items: AnalysisSum
                 <StatusBadge status={a.status} verdict={a.verdict} />
               </td>
               <td className="px-3 py-3 text-right font-mono tabular-nums">{a.score != null ? Math.round(a.score) : "-"}</td>
-              {showOwner && <td className="px-3 py-3 muted">#{a.user_id}</td>}
+              {showOwner && <td className="px-3 py-3 whitespace-nowrap muted">{a.owner_name ?? `#${a.user_id}`}</td>}
               <td className="px-5 py-3 text-right whitespace-nowrap muted">{timeAgo(a.created_at)}</td>
             </tr>
           ))}

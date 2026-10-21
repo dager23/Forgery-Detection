@@ -6,7 +6,18 @@ import json
 import uuid
 
 import cv2
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
+import numpy as np
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    Response,
+    UploadFile,
+    status,
+)
 from fastapi.responses import FileResponse
 from pydantic import TypeAdapter, ValidationError
 from sqlalchemy import select
@@ -85,9 +96,13 @@ def get_template(template_id: int, db: Session = Depends(get_db), _: User = Depe
     return t
 
 
+THUMB_WIDTH = 480
+
+
 @router.get("/{template_id}/image")
 def template_image(
     template_id: int,
+    size: str = Query("full", pattern="^(full|thumb)$"),
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
     _: User = Depends(current_user),
@@ -96,9 +111,17 @@ def template_image(
     path = settings.templates_dir / t.image_file if t else None
     if path is None or not path.exists():
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Template not found")
-    return FileResponse(
-        path, media_type="image/png", headers={"Cache-Control": "private, max-age=3600"}
-    )
+    headers = {"Cache-Control": "private, max-age=3600"}
+    if size == "full":
+        return FileResponse(path, media_type="image/png", headers=headers)
+    thumb = path.with_name(f"{path.stem}.thumb.jpg")
+    if not thumb.exists() or thumb.stat().st_mtime < path.stat().st_mtime:
+        img = cv2.imdecode(np.fromfile(str(path), np.uint8), cv2.IMREAD_COLOR)
+        h, w = img.shape[:2]
+        size_ = (THUMB_WIDTH, round(h * THUMB_WIDTH / w))
+        small = cv2.resize(img, size_, interpolation=cv2.INTER_AREA)
+        cv2.imwrite(str(thumb), small, [cv2.IMWRITE_JPEG_QUALITY, 82])
+    return FileResponse(thumb, media_type="image/jpeg", headers=headers)
 
 
 @router.patch("/{template_id}", response_model=TemplateOut)
@@ -138,4 +161,5 @@ def delete_template(
     db.delete(t)
     db.commit()
     path.unlink(missing_ok=True)
+    path.with_name(f"{path.stem}.thumb.jpg").unlink(missing_ok=True)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -98,6 +98,7 @@ export interface AnalysisSummary {
   completed_at: string | null;
   duration_ms: number | null;
   user_id: number;
+  owner_name: string | null;
 }
 
 export interface Analysis extends AnalysisSummary {
@@ -105,7 +106,6 @@ export interface Analysis extends AnalysisSummary {
   error: string | null;
   result: Report | null;
   template_name: string | null;
-  owner_name: string | null;
 }
 
 export interface Page<T> {
@@ -256,4 +256,5 @@ export const api = {
 };
 
 export const fileUrl = (analysisId: string, name: string) => `/api/analyses/${analysisId}/files/${name}`;
-export const templateImageUrl = (id: number) => `/api/templates/${id}/image`;
+export const templateImageUrl = (id: number, size: "full" | "thumb" = "full") =>
+  `/api/templates/${id}/image${size === "thumb" ? "?size=thumb" : ""}`;

@@ -117,7 +117,7 @@ export default function Templates() {
           {q.data!.map((t) => (
             <Link key={t.id} to={`/app/templates/${t.id}`} className="card group overflow-hidden">
               <div className="aspect-[3/4] overflow-hidden border-b border-slate-200 bg-slate-100 dark:border-slate-800 dark:bg-slate-800">
-                <img src={templateImageUrl(t.id)} alt="" loading="lazy" className="size-full object-cover object-top transition-transform group-hover:scale-[1.02]" />
+                <img src={templateImageUrl(t.id, "thumb")} alt="" loading="lazy" className="size-full object-cover object-top transition-transform group-hover:scale-[1.02]" />
               </div>
               <div className="p-4">
                 <div className="font-medium text-slate-900 group-hover:text-brand-700 dark:text-white dark:group-hover:text-brand-300">{t.name}</div>

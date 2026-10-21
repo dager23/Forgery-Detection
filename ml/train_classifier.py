@@ -35,6 +35,7 @@ def evaluate(model, loader, dev) -> dict:
     model.eval()
     probs, labels = [], []
     for x, y in loader:
+        x, y = x.flatten(0, 1), y.flatten()
         logits = model(x.to(dev)).float()
         probs += torch.softmax(logits, 1)[:, 1].cpu().tolist()
         labels += y.tolist()
@@ -52,7 +53,8 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--sources", default="synthetic,casia2,doctamper")
     ap.add_argument("--weights", default="")
-    ap.add_argument("--batch", type=int, default=96)
+    ap.add_argument("--batch", type=int, default=96, help="patches per batch")
+    ap.add_argument("--per-image", type=int, default=8, help="patches cut from each image")
     ap.add_argument("--epochs", type=int, default=10)
     ap.add_argument("--iters", type=int, default=500)
     ap.add_argument("--lr", type=float, default=1e-3)
@@ -77,17 +79,25 @@ def main() -> None:
     log = Logger(run_dir)
     log.log(event="start", sources=used, sizes=[len(s) for s in train_src], device=str(dev))
 
+    imgs = max(1, a.batch // a.per_image)  # images per batch
     tl = DataLoader(
-        PatchDataset(train_src, length=a.iters * a.batch, weights=weights),
-        a.batch,
+        PatchDataset(train_src, length=a.iters * imgs, weights=weights, per_image=a.per_image),
+        imgs,
         num_workers=a.workers,
         pin_memory=True,
         persistent_workers=a.workers > 0,
         drop_last=True,
     )
     vl = DataLoader(
-        PatchDataset(val_src, length=a.val_n, weights=weights, train=False, seed=1),
-        256,
+        PatchDataset(
+            val_src,
+            length=max(1, a.val_n // a.per_image),
+            weights=weights,
+            train=False,
+            seed=1,
+            per_image=a.per_image,
+        ),
+        max(1, 256 // a.per_image),
         num_workers=a.workers,
         persistent_workers=a.workers > 0,
     )
@@ -105,6 +115,7 @@ def main() -> None:
         model.train()
         run_loss, n = 0.0, 0
         for x, y in tl:
+            x, y = x.flatten(0, 1), y.flatten()  # [images, k, ...] -> [patches, ...]
             x, y = x.to(dev, non_blocking=True), y.to(dev, non_blocking=True)
             loss = F.cross_entropy(model(x), y, label_smoothing=0.05)
             opt.zero_grad(set_to_none=True)

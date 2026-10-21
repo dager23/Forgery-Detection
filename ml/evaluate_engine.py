@@ -30,10 +30,9 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "ml"))
 sys.path.insert(0, str(ROOT / "backend"))
 
+from docauth.forensics.modules.base import CURVES  # noqa: E402
 from docauth_ml.data import build_sources  # noqa: E402
 from docauth_ml.train_common import DATA_ROOT, roc_auc  # noqa: E402
-
-from docauth.forensics.modules.base import CURVES  # noqa: E402
 
 WEIGHTS = ROOT / "backend" / "docauth" / "forensics" / "deep" / "weights"
 TARGET_FPR = 0.05
