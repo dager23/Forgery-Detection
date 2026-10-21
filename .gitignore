@@ -1,0 +1,36 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node
+node_modules/
+frontend/dist/
+*.tsbuildinfo
+
+# Runtime data (uploads, analyses, sqlite db, datasets)
+data/*
+!data/.gitkeep
+
+# Training outputs (checkpoints are large; exported ONNX weights live in backend/.../weights)
+ml/runs/
+ml/cache/
+*.pt
+*.pth
+*.ckpt
+
+# Secrets / env
+.env
+.env.*
+!.env.example
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
