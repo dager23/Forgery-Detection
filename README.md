@@ -8,6 +8,12 @@ region boxes, plus a downloadable PDF report.
 Originally built for **Smart India Hackathon 2023**. v2 is a complete rebuild: the v1 repository
 contained only a React + Express login shell, and none of the analysis described in its README.
 
+![A forged certificate rejected, with the edited fields boxed](docs/screenshots/result.jpg)
+
+| Pixel manipulation heatmap | Template editor (variable fields) |
+|---|---|
+| ![Heatmap over the two edited values](docs/screenshots/heatmap.png) | ![Template with ignore regions](docs/screenshots/templates.jpg) |
+
 ## What it detects
 
 | # | Module | What it looks for |
@@ -21,10 +27,29 @@ contained only a React + Express login shell, and none of the analysis described
 | 7 | **SRM-CNN classifier** | CNN whose first layer starts from the 30 SRM high-pass filters; real vs. fake |
 | 8 | **Pixel manipulation analyzer** | Two-stream RGB + DCT network producing a per-pixel heatmap |
 
-Modules 1, 2 (SRM-CNN), 3 (pixel analyzer) and 4 (SSIM) implement the four features in the
+Modules 1, 7 (SRM-CNN), 8 (pixel analyzer) and 6 (SSIM) implement the four features in the
 original README; 2-5 add classical forensics that need no training. Details and limitations are
-in [docs/FORENSICS.md](docs/FORENSICS.md); measured accuracy is in
-[docs/EVALUATION.md](docs/EVALUATION.md).
+in [docs/FORENSICS.md](docs/FORENSICS.md).
+
+## Measured accuracy
+
+On 400 held-out synthetic certificates (200 forged with text replacement, copy-move, splicing,
+erasure or inserted text; never used for training or model selection), with 2-fold cross-fitted
+calibration - full tables in [docs/EVALUATION.md](docs/EVALUATION.md):
+
+| | Accepted | Suspicious | Rejected |
+|---|---|---|---|
+| Genuine | **88.0 %** | 10.0 % | 2.0 % |
+| Forged | 11.5 % | 2.5 % | **86.0 %** |
+
+Fused ROC-AUC **0.947** (pixel analyzer alone 0.947, before calibration 0.860).
+
+**Read these numbers with care.** Both networks were trained on the synthetic forgery generator
+only - CASIA v2 and DocTamper were not available when the models were trained - so real-world
+accuracy is unmeasured and will be lower. The networks also do not apply to natural photos (they
+were never shown any); the engine detects photo-like inputs, lowers the networks' weight and uses
+the classical modules there. Retrain with the real datasets via [docs/TRAINING.md](docs/TRAINING.md)
+before relying on DocAuth for decisions.
 
 ## v1 vs v2
 
@@ -35,7 +60,7 @@ in [docs/FORENSICS.md](docs/FORENSICS.md); measured accuracy is in
 | Auth | token readable by anyone via `/get-token?email=`, hard-coded secret | httpOnly JWT cookie, bcrypt, throttling, roles |
 | Frontend | CRA, fixed-pixel layouts, 4 copy-paste error pages, did not compile | React 19 + Vite + TypeScript, responsive, dark mode |
 | Inputs | - | JPEG, PNG, TIFF, BMP, WebP, multi-page PDF |
-| Quality | no tests | 34 backend + frontend tests, CI, lint |
+| Quality | no tests | 36 backend + 10 frontend tests, CI, lint |
 
 ## Quick start (development)
 
@@ -85,11 +110,11 @@ docauth create-admin --email you@example.com
 
 ## Models
 
-The two networks ship as ONNX files in `backend/docauth/forensics/deep/weights/` and run on
-CPU with ONNX Runtime. To retrain them on CASIA v2, DocTamper and the synthetic forgery set,
-export, and recalibrate the engine, follow [docs/TRAINING.md](docs/TRAINING.md). If the weight
-files are missing, those two modules are reported as "not installed" and everything else
-still works.
+The two networks ship as ONNX files in `backend/docauth/forensics/deep/weights/` (with the fitted
+`calibration.json`) and run on CPU with ONNX Runtime - an analysis takes a few seconds per page.
+To retrain them on CASIA v2, DocTamper and the synthetic forgery set, export, and recalibrate the
+engine, follow [docs/TRAINING.md](docs/TRAINING.md). If the weight files are missing, those two
+modules are reported as "not installed" and everything else still works.
 
 ## Project layout
 

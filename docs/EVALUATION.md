@@ -1,6 +1,6 @@
 # DocAuth evaluation
 
-Generated 2026-10-22 08:48 UTC.
+Generated 2026-10-22 08:54 UTC by `ml/evaluate_engine.py` on 400 labelled files from: synthetic. Every module of the real engine runs on each file. *Flag rate* is the share of files a module marks as suspicious (suspicion > 0.5). With `--calibrate` the files are split into two folds and each fold is scored by a calibration fitted on the other one, so no file is scored by a calibration that saw it; the calibration shipped in `calibration.json` is then fitted on all files.
 
 ### Before calibration (default engine)
 

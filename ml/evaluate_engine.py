@@ -337,7 +337,16 @@ def main() -> None:
         rows = run_engine(tasks, a.workers, calibration_off=a.calibrate)
         raw_path.parent.mkdir(parents=True, exist_ok=True)
         raw_path.write_text(json.dumps(rows), encoding="utf-8")  # untouched engine outputs
-    out_md = [f"# DocAuth evaluation\n\nGenerated {datetime.now(UTC):%Y-%m-%d %H:%M UTC}.\n"]
+    sources = ", ".join(sorted({r["source"] for r in rows}))
+    out_md = [
+        "# DocAuth evaluation\n",
+        f"Generated {datetime.now(UTC):%Y-%m-%d %H:%M UTC} by `ml/evaluate_engine.py` on "
+        f"{len(rows)} labelled files from: {sources}. Every module of the real engine runs on each "
+        "file. *Flag rate* is the share of files a module marks as suspicious (suspicion > 0.5). "
+        "With `--calibrate` the files are split into two folds and each fold is scored by a "
+        "calibration fitted on the other one, so no file is scored by a calibration that saw it; "
+        "the calibration shipped in `calibration.json` is then fitted on all files.\n",
+    ]
 
     if a.calibrate:
         out_md.append(report(rows, "Before calibration (default engine)"))
