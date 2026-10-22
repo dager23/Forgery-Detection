@@ -60,7 +60,7 @@ before relying on DocAuth for decisions.
 | Auth | token readable by anyone via `/get-token?email=`, hard-coded secret | httpOnly JWT cookie, bcrypt, throttling, roles |
 | Frontend | CRA, fixed-pixel layouts, 4 copy-paste error pages, did not compile | React 19 + Vite + TypeScript, responsive, dark mode |
 | Inputs | - | JPEG, PNG, TIFF, BMP, WebP, multi-page PDF |
-| Quality | no tests | 36 backend + 10 frontend tests, CI, lint |
+| Quality | no tests | 37 backend + 10 frontend tests, CI, lint |
 
 ## Quick start (development)
 

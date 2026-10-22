@@ -117,3 +117,17 @@ def test_auto_template_detection(client, admin_token, user_token):
     tm = next(m for m in body["result"]["modules"] if m["key"] == "template")
     assert tm["status"] == "ok", (tm["summary"], tm["metrics"], body["template_id"])
     assert body["result"]["template"]["auto_selected"] is True
+
+
+def test_auto_template_can_be_disabled(client, admin_token, user_token):
+    _create_template(client, admin_token, layout=9)
+    data = synth.jpeg_bytes(synth.render_document(seed=301, layout_seed=9).image, 92)
+    r = client.post(
+        "/api/analyses",
+        files={"file": ("a.jpg", io.BytesIO(data), "image/jpeg")},
+        data={"auto_template": "false"},
+        headers=bearer(user_token),
+    )
+    body = wait_done(client, r.json()["id"], bearer(user_token))
+    tm = next(m for m in body["result"]["modules"] if m["key"] == "template")
+    assert tm["status"] == "skipped"

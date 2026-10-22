@@ -42,6 +42,12 @@ async def _read_limited(file: UploadFile, limit: int) -> bytes:
     return bytes(buf)
 
 
+def _flag(value: str | None, default: bool) -> bool:
+    if value is None or not value.strip():
+        return default
+    return value.strip().lower() not in {"false", "0", "no", "off"}
+
+
 def _get_owned(db: Session, analysis_id: str, user: User) -> Analysis:
     a = db.get(Analysis, analysis_id)
     # 404 (not 403) for other users' analyses so IDs can't be probed
@@ -70,7 +76,9 @@ async def create_analysis(
     request: Request,
     file: UploadFile = File(...),
     template_id: int | None = Form(None),
-    auto_template: bool = Form(True),
+    # parsed by hand: newer FastAPI turns an omitted bool form field into False (checkbox
+    # semantics), but API clients that don't send it should still get auto-detection
+    auto_template: str | None = Form(None),
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
     user: User = Depends(current_user),
@@ -91,7 +99,7 @@ async def create_analysis(
     a = Analysis(
         user_id=user.id,
         template_id=template_id,
-        auto_template=auto_template and template_id is None,
+        auto_template=_flag(auto_template, default=True) and template_id is None,
         filename=storage.safe_display_name(file.filename),
         stored_file=stored,
         mime=mime,
