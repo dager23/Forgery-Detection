@@ -8,8 +8,6 @@ region boxes, plus a downloadable PDF report.
 Originally built for **Smart India Hackathon 2023**. v2 is a complete rebuild: the v1 repository
 contained only a React + Express login shell, and none of the analysis described in its README.
 
-![Result view](docs/screenshots/analysis.png)
-
 ## What it detects
 
 | # | Module | What it looks for |

@@ -1,0 +1,18 @@
+{
+  "name": "classifier",
+  "version": "20261022-0011",
+  "threshold": 0.356,
+  "confidence": 0.75,
+  "trained_on": [
+    "synthetic"
+  ],
+  "domain": "documents",
+  "epoch": 8,
+  "val_metrics": {
+    "auc": 0.905,
+    "acc@0.5": 0.8253,
+    "bacc": 0.8168,
+    "thr": 0.356
+  },
+  "exported_at": "2026-10-22T00:11:04+00:00"
+}

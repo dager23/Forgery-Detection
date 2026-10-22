@@ -1,0 +1,17 @@
+{
+  "name": "segmenter",
+  "version": "20261021-2321",
+  "threshold": 0.5,
+  "confidence": 0.75,
+  "trained_on": [
+    "synthetic"
+  ],
+  "epoch": 9,
+  "val_metrics": {
+    "pixel_f1": 0.9097,
+    "img_auc": 0.9833,
+    "img_bacc": 0.9523,
+    "img_thr": 0.9948
+  },
+  "exported_at": "2026-10-21T23:21:02+00:00"
+}
