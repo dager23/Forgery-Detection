@@ -6,16 +6,25 @@ The README's per-module 0-10 score is `10 x (1 - suspicion)`: 8-10 green, 4-8 am
 
 ## Fusion and verdict
 
-By default each module contributes at most `weight x confidence x suspicion` and contributions
-are combined with a noisy-OR (one strong, reliable signal is enough; several weak ones add up).
-After `ml/evaluate_engine.py --calibrate` the engine instead uses a logistic regression fitted
-on labelled data. The fused authenticity score is `100 x (1 - p)`:
+Without calibration each module contributes at most `weight x confidence x suspicion` and the
+contributions are combined with a noisy-OR (one strong, reliable signal is enough; several weak
+ones add up). `ml/evaluate_engine.py --calibrate` fits, on labelled data:
+
+1. each module's **operating point** - suspicion 0.5 at about 5 % false positives on genuine files;
+2. a **logistic-regression fusion** over `confidence x log-odds(suspicion)` per module, with
+   weights constrained to be non-negative (a module that flags a file never makes it look more
+   genuine; skipped modules contribute 0);
+3. the **verdict thresholds** on the fused authenticity score `100 x (1 - p)`:
 
 | Score | Verdict | README flag |
 |---|---|---|
-| >= 70 (calibrated) | **Accepted** | green |
-| 40 - 70 | **Suspicious** | amber |
-| < 40 | **Rejected** | red |
+| >= authentic threshold (default 70) | **Accepted** | green |
+| between the thresholds | **Suspicious** | amber |
+| < tampered threshold (default 40) | **Rejected** | red |
+
+The calibrated values live in `backend/docauth/forensics/deep/weights/calibration.json`; the
+measured accuracy (cross-fitted, so no page is scored by a calibration that saw it) is in
+[EVALUATION.md](EVALUATION.md).
 
 A module that crashes is reported as `error` and excluded; it never sinks the whole analysis.
 
@@ -78,13 +87,17 @@ tries to recognise one of the registered templates automatically.
 
 ## 7. SRM-CNN classifier (README module 2)
 
-See [TRAINING.md](TRAINING.md). Patch probabilities are fused into a real/fake decision and
-drawn as a heatmap.
+See [TRAINING.md](TRAINING.md). The most suspicious patch decides the page's real/fake
+evidence (log-odds); all patch probabilities are drawn as a heatmap. Trained on synthetic data
+only, it is the weakest of the networks at page level - the calibrated fusion weights it
+accordingly.
 
 ## 8. Pixel manipulation analyzer (README module 3)
 
 Two-stream RGB + DCT network producing a per-pixel heatmap; the manipulated-pixel percentage
-and localised regions are reported. Tiles of 512 px with 64 px overlap are processed at native
+and localised regions are reported. The page evidence is the log-odds of the 99.99th-percentile
+pixel probability: a forged value can cover 0.1 % of a page, so area must not dilute it, and the
+percentile ignores single noisy pixels. Tiles of 512 px with 64 px overlap are processed at native
 resolution with 8-aligned origins so compression traces are preserved.
 
 ## Known limitations

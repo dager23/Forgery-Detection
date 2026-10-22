@@ -47,7 +47,8 @@ def session(name: str):
             import onnxruntime as ort
 
             opts = ort.SessionOptions()
-            opts.intra_op_num_threads = max(1, min(4, (os.cpu_count() or 2) // 2))
+            default_threads = max(1, min(4, (os.cpu_count() or 2) // 2))
+            opts.intra_op_num_threads = int(os.environ.get("DOCAUTH_ORT_THREADS", default_threads))
             providers = [
                 p
                 for p in ("CUDAExecutionProvider", "CPUExecutionProvider")

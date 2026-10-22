@@ -10,7 +10,9 @@ import {
   ScanLine,
   Waves,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
+import { api } from "../api";
 import { useAuth } from "../auth";
 import { ThemeSwitch } from "../components/AppShell";
 import { Logo, VerdictBadge } from "../components/ui";
@@ -76,6 +78,10 @@ function HeroMock() {
 
 export default function Landing() {
   const { user } = useAuth();
+  const health = useQuery({ queryKey: ["health"], queryFn: api.health, staleTime: 60_000 });
+  const t = health.data?.thresholds ?? { authentic: 70, tampered: 40 };
+  const hi = Math.round(t.authentic);
+  const lo = Math.round(t.tampered);
   const cta = user ? { to: "/app", label: "Open dashboard" } : { to: "/register", label: "Create free account" };
   return (
     <div className="min-h-dvh overflow-x-clip">
@@ -160,9 +166,9 @@ export default function Landing() {
         <div className="mt-10 grid gap-4 sm:grid-cols-3">
           {(
             [
-              ["authentic", "Score 70-100", "No significant manipulation found."],
-              ["suspicious", "Score 40-70", "Some indicators; review the highlighted areas."],
-              ["tampered", "Score 0-40", "Strong evidence of manipulation."],
+              ["authentic", `Score ${hi}-100`, "No significant manipulation found."],
+              ["suspicious", `Score ${lo}-${hi}`, "Some indicators; review the highlighted areas."],
+              ["tampered", `Score 0-${lo}`, "Strong evidence of manipulation."],
             ] as const
           ).map(([v, range, text]) => (
             <div key={v} className="rounded-2xl border border-slate-200 p-5 dark:border-slate-800">

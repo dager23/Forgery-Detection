@@ -10,8 +10,9 @@ DocAuth ships two networks, trained with PyTorch and served to the backend as ON
 
 * **SRMPatchNet** - the first convolution is initialised with the 30 SRM high-pass filters
   (Fridrich & Kodovsky's rich models, as in Rao & Ni 2016) followed by truncation, then a small
-  CNN. It runs densely over 128 px patches; the top-3 % most suspicious patches are averaged
-  ("feature fusion") into the image-level real/fake probability.
+  CNN (a stride-2 convolution follows the SRM layer to keep CPU inference fast). It runs densely
+  over 128 px patches; the page evidence is the log-odds of the most suspicious patch, which
+  beat top-k averages and the mean on validation data.
 * **TwoStreamSegNet** - an ImageNet ResNet-18 RGB stream plus a DCT stream: 8x8 block DCT of
   the JPEG luminance channel, one-hot histograms of the low-frequency coefficients (the
   statistic that reveals double compression) and log-magnitudes. The streams are fused at
@@ -79,8 +80,12 @@ This runs the real engine (all modules) on validation images and, with `--calibr
 one half and reports on the other:
 
 * each module's operating point - suspicion 0.5 at about 5 % false positives on genuine files,
-* a logistic-regression fusion over the module outputs (replacing the default noisy-OR),
+* a logistic-regression fusion over the module outputs (replacing the default noisy-OR); its
+  weights are constrained to be non-negative, so a module that flags a file can never make it
+  look more genuine,
 * the Accepted / Suspicious / Rejected score thresholds from the genuine-score distribution.
 
 Output: `backend/docauth/forensics/deep/weights/calibration.json` (loaded by the engine) and
-`docs/EVALUATION.md`. Re-run calibration whenever you retrain a model or add a data source.
+`docs/EVALUATION.md`. The raw engine outputs are kept in `ml/runs/evaluation.json`, so
+`--reuse` refits the calibration without re-running the (slow) engine. Re-run calibration
+whenever you retrain a model or add a data source.

@@ -216,3 +216,25 @@ def test_document_likeness_separates_documents_from_photos():
     page = synth.scan_effects(synth.render_document(seed=3).image, random.Random(0))
     assert document_likeness(page) > 0.8
     assert document_likeness(synth.natural_image(5)) < 0.2
+
+
+def test_fitted_fusion_only_applies_inside_its_domain():
+    cal = {
+        "fusion": {
+            "method": "logistic",
+            "coef": {"metadata": 1.0},
+            "bias": -2.0,
+            "neutral": {"metadata": -1.0},
+            "ref_confidence": {"metadata": 0.35},
+            "domain": "documents",
+        },
+        "thresholds": {"authentic": 55.0, "tampered": 30.0},
+    }
+    eng = Engine(modules=[MetadataModule()], calibration=cal)
+    doc_page = synth.jpeg_bytes(synth.render_document(seed=8).image, 90)
+    on_doc = eng.analyze(_doc(doc_page))
+    assert on_doc.fusion["method"] == "logistic"
+    assert on_doc.thresholds["authentic"] == 55.0
+    on_photo = eng.analyze(_doc(synth.jpeg_bytes(synth.natural_image(9, (480, 640)), 90)))
+    assert on_photo.fusion["method"].startswith("noisy-or")
+    assert on_photo.thresholds["authentic"] == 70.0  # default bands outside the fitted domain

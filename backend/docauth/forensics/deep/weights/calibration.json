@@ -1,0 +1,63 @@
+{
+  "modules": {
+    "cnn": {
+      "center": 2.7668
+    },
+    "ela": {
+      "center": 1.2365
+    },
+    "jpeg": {
+      "center": 2.9286
+    },
+    "noise": {
+      "center": 1.1297
+    },
+    "segmentation": {
+      "center": 5.9866
+    }
+  },
+  "fusion": {
+    "method": "logistic",
+    "coef": {
+      "cnn": 0.7714,
+      "copymove": 1.6958,
+      "ela": 0.0133,
+      "jpeg": 0.0,
+      "metadata": 0.0,
+      "noise": 0.0,
+      "segmentation": 3.6121
+    },
+    "bias": 2.0098,
+    "neutral": {
+      "cnn": -0.2059,
+      "copymove": -1.0,
+      "ela": -0.3939,
+      "jpeg": -0.848,
+      "metadata": -1.0,
+      "noise": -0.3271,
+      "segmentation": -0.8334
+    },
+    "ref_confidence": {
+      "cnn": 0.75,
+      "copymove": 0.8,
+      "ela": 0.8,
+      "jpeg": 0.85,
+      "metadata": 0.35,
+      "noise": 0.1,
+      "segmentation": 0.75
+    },
+    "domain": "documents"
+  },
+  "thresholds": {
+    "authentic": 55.0,
+    "tampered": 30.5
+  },
+  "fitted_on": {
+    "samples": 400,
+    "sources": [
+      "synthetic"
+    ],
+    "target_module_fpr": 0.05,
+    "date": "2026-10-22T08:48:59+00:00"
+  }
+}

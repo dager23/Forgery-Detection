@@ -25,6 +25,7 @@ from docauth.forensics.modules.metadata import MetadataModule
 from docauth.forensics.modules.noise import NoiseModule
 from docauth.forensics.modules.template import TemplateModule
 from docauth.forensics.types import Document, ModuleResult, TemplateRef, noisy_or
+from docauth.forensics.util import document_likeness
 
 log = logging.getLogger("docauth.engine")
 
@@ -161,6 +162,10 @@ class Engine:
         self.modules = modules if modules is not None else default_modules()
         self.calibration = calibration if calibration is not None else load_calibration()
 
+    @property
+    def thresholds(self) -> dict[str, float]:
+        return {**DEFAULT_THRESHOLDS, **self.calibration.get("thresholds", {})}
+
     def catalog(self) -> list[dict[str, Any]]:
         return [
             {
@@ -202,8 +207,8 @@ class Engine:
             r.duration_ms = int((time.perf_counter() - t) * 1000)
             results.append(r)
 
-        fusion, score = self.fuse(results)
-        thresholds = {**DEFAULT_THRESHOLDS, **self.calibration.get("thresholds", {})}
+        likeness = min((document_likeness(p.image) for p in doc.pages), default=1.0)
+        fusion, score, thresholds = self.fuse(results, likeness)
         if score >= thresholds["authentic"]:
             verdict = "authentic"
         elif score >= thresholds["tampered"]:
@@ -230,32 +235,83 @@ class Engine:
             template=tpl_info,
         )
 
-    def fuse(self, results: list[ModuleResult]) -> tuple[dict[str, Any], float]:
+    def fuse(
+        self, results: list[ModuleResult], likeness: float = 1.0
+    ) -> tuple[dict[str, Any], float, dict[str, float]]:
+        """Combine module evidence into an authenticity score and the thresholds that apply.
+
+        A fitted fusion is only trusted inside the domain it was fitted on: a fusion fitted on
+        documents falls back to noisy-OR (over the calibrated per-module operating points, with
+        the default bands) for photos, where e.g. JPEG ghosts matter far more than on scans.
+        """
         cal = self.calibration.get("fusion", {})
+        thresholds = self.thresholds
+        in_domain = cal.get("domain", "documents") == "general" or likeness >= 0.5
         weights = {**DEFAULT_WEIGHTS, **cal.get("weights", {})}
         contributions = {
             r.key: weights.get(r.key, 0.5) * r.confidence * r.suspicion
             for r in results
             if r.status == "ok"
         }
-        if cal.get("method") == "logistic" and cal.get("coef"):
+        if cal.get("method") == "logistic" and cal.get("coef") and in_domain:
             z = float(cal.get("bias", 0.0))
             for r in results:
-                if r.status == "ok" and r.key in cal["coef"]:
-                    z += cal["coef"][r.key] * r.suspicion * r.confidence
+                if r.key in cal["coef"]:
+                    f = fusion_feature(
+                        r.status,
+                        r.suspicion,
+                        r.confidence,
+                        cal.get("neutral", {}).get(r.key, 0.0),
+                        cal.get("ref_confidence", {}).get(r.key),
+                    )
+                    push = cal["coef"][r.key] * f
+                    z += push
+                    if r.status == "ok":
+                        # what the UI shows: how hard each module pushed towards "tampered"
+                        contributions[r.key] = max(0.0, push)
             p = 1.0 / (1.0 + math.exp(-max(-60.0, min(60.0, z))))
             method = "logistic"
         else:
             p = noisy_or(list(contributions.values()))
             method = "noisy-or"
+            if cal.get("method") == "logistic":
+                method = "noisy-or (outside the fitted fusion's domain)"
+                thresholds = dict(DEFAULT_THRESHOLDS)
         return (
             {
                 "method": method,
                 "contributions": {k: round(v, 4) for k, v in contributions.items()},
                 "weights": weights,
+                "document_likeness": round(likeness, 3),
             },
             100.0 * (1.0 - p),
+            thresholds,
         )
+
+
+LOGIT_CAP = math.log(999.0)  # suspicion is clipped to [0.001, 0.999] before taking log-odds
+
+
+def fusion_feature(
+    status: str,
+    suspicion: float,
+    confidence: float,
+    neutral: float = 0.0,
+    ref_confidence: float | None = None,
+) -> float:
+    """Module evidence for the fitted (logistic) fusion, in [-1, 1].
+
+    Log-odds keep the ranking information that a saturated suspicion (0.999 vs 0.9999) loses.
+    A skipped or low-confidence module is blended towards ``neutral`` - the value a typical
+    *genuine* file produces - so missing evidence pushes the verdict neither way (a model
+    calibrated on documents would otherwise read "silent deep modules" as suspicious).
+    """
+    if status != "ok":
+        return neutral
+    s = min(max(suspicion, 1e-3), 1.0 - 1e-3)
+    ell = math.log(s / (1.0 - s)) / LOGIT_CAP
+    w = 1.0 if not ref_confidence else min(1.0, confidence / ref_confidence)
+    return w * ell + (1.0 - w) * neutral
 
 
 def _summary(verdict: str, score: float, results: list[ModuleResult], contrib: dict) -> str:

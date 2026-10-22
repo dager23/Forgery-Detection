@@ -147,6 +147,7 @@ export interface Health {
   modules: { key: string; title: string; description: string; available: boolean; reason: string }[];
   models: Record<string, { version?: string; trained_on?: string[]; val_metrics?: Record<string, number> }>;
   calibrated: boolean;
+  thresholds: { authentic: number; tampered: number };
   limits: { max_upload_mb: number; max_pdf_pages: number };
   registration_open: boolean;
 }

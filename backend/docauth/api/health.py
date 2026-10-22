@@ -22,6 +22,7 @@ def health(request: Request) -> dict:
             n: deep_rt.model_info(n) for n in ("classifier", "segmenter") if deep_rt.has_model(n)
         },
         "calibrated": bool(engine.calibration),
+        "thresholds": engine.thresholds,
         "limits": {
             "max_upload_mb": settings.max_upload_mb,
             "max_pdf_pages": settings.max_pdf_pages,

@@ -15,6 +15,12 @@ MAX_PATCHES = 400
 BATCH = 64
 
 
+def logit(p: float, cap: float = 12.0) -> float:
+    """Log-odds, so evidence keeps its ranking near 0 and 1 (0.999 vs 0.99999)."""
+    p = min(max(p, 1e-7), 1 - 1e-7)
+    return float(np.clip(np.log(p / (1 - p)), -cap, cap))
+
+
 class _OnnxModule(Module):
     model_name = ""
 
@@ -63,27 +69,30 @@ class CnnClassifierModule(_OnnxModule):
         page_scores = []
         for page in doc.pages:
             page_scores.append(self._page(page, res))
+        # page evidence = the most suspicious patch (the best page statistic on validation data)
         p_fake = max(page_scores) if page_scores else 0.0
         res.metrics.update(
             {"p_fake": round(p_fake, 4), "threshold": thr, "model": info.get("version", "unknown")}
         )
-        # recentre so the model's own operating threshold maps to suspicion 0.5
-        res.suspicion = float(self.calibrated(ctx, p_fake, center=thr))
-        res.metrics["evidence"] = round(p_fake, 4)
+        x = logit(p_fake)
+        res.metrics["evidence"] = round(x, 4)
+        # uncalibrated, the model's own patch threshold maps to suspicion 0.5
+        res.suspicion = float(self.calibrated(ctx, x, center=logit(thr)))
         res.confidence = float(info.get("confidence", 0.75))
         if any(p.resampled for p in doc.pages):
             res.confidence *= 0.7
         factor = self.domain_factor(doc, info)
         res.confidence *= factor
-        label = "manipulated" if p_fake >= thr else "authentic"
+        label = "manipulated" if res.suspicion >= 0.5 else "authentic"
         res.summary = (
-            f"Network output: real {100 * (1 - p_fake):.0f}% / fake {100 * p_fake:.0f}% -> {label}."
+            f"Most suspicious patch: real {100 * (1 - p_fake):.0f}% / fake {100 * p_fake:.0f}% "
+            f"-> {label}."
         ) + self.domain_note(factor)
-        if p_fake >= thr:
+        if res.suspicion >= 0.5 and factor >= 0.6:
             res.findings.append(
                 Finding(
-                    "high" if p_fake > 0.85 else "medium",
-                    f"The CNN classifies the image as manipulated ({100 * p_fake:.0f}%).",
+                    "high" if res.suspicion > 0.85 else "medium",
+                    f"The CNN classifies part of the image as manipulated ({100 * p_fake:.0f}%).",
                 )
             )
         return res
@@ -120,9 +129,8 @@ class CnnClassifierModule(_OnnxModule):
             e = np.exp(logits - logits.max(axis=1, keepdims=True))
             probs.append(e[:, 1] / e.sum(axis=1))
         p = np.concatenate(probs)
-        # feature fusion: mean of the top-k most suspicious patches
-        k = max(3, int(0.03 * len(p)))
-        score = float(np.sort(p)[-k:].mean())
+        score = float(p.max())
+        top3 = float(np.sort(p)[-max(3, int(0.03 * len(p))) :].mean())
 
         acc = np.zeros((h, w), np.float32)
         cnt = np.zeros((h, w), np.float32)
@@ -139,7 +147,12 @@ class CnnClassifierModule(_OnnxModule):
             )
         )
         res.metrics.setdefault("pages", []).append(
-            {"page": page.index, "p_fake": round(score, 4), "patches": len(p)}
+            {
+                "page": page.index,
+                "p_max": round(score, 4),
+                "p_top3": round(top3, 4),
+                "patches": len(p),
+            }
         )
         return score
 
@@ -171,12 +184,11 @@ class SegmentationModule(_OnnxModule):
                 "model": info.get("version", "unknown"),
             }
         )
-        # evidence = confidence of the strongest localised region (a forged value can be 0.1 %
-        # of a page, so area must not dilute it); isolated hot pixels without a region count half
-        region_peak = max((b.score for b in res.boxes), default=0.0)
-        x = region_peak if res.boxes else 0.5 * worst_peak
+        # evidence = log-odds of the 99.99th-percentile pixel: a forged value can be 0.1 % of a
+        # page so area must not dilute it, and the percentile ignores single noisy pixels
+        x = logit(worst_peak)
         res.metrics["evidence"] = round(x, 4)
-        res.suspicion = float(self.calibrated(ctx, x, center=thr * 0.8))
+        res.suspicion = float(self.calibrated(ctx, x, center=logit(thr)))
         res.confidence = float(info.get("confidence", 0.75))
         if any(p.resampled for p in doc.pages):
             res.confidence *= 0.7
@@ -184,7 +196,7 @@ class SegmentationModule(_OnnxModule):
         res.confidence *= factor
         res.summary = f"{worst_pct:.2f}% of pixels predicted as manipulated."
         res.summary += self.domain_note(factor)
-        if res.boxes and factor >= 0.6:
+        if res.boxes and res.suspicion >= 0.5 and factor >= 0.6:
             res.findings.append(
                 Finding(
                     "high" if res.suspicion > 0.75 else "medium",
@@ -203,7 +215,7 @@ class SegmentationModule(_OnnxModule):
         boxes = mask_to_boxes(hot, page.index, "manipulated pixels", 1.0, min_area, prob)
         res.boxes.extend(boxes)
         pct = float(hot.mean() * 100)
-        peak = float(np.percentile(prob, 99.9)) if prob.size else 0.0
+        peak = float(np.percentile(prob, 99.99)) if prob.size else 0.0
         res.artifacts.append(
             Artifact(
                 "segmentation",

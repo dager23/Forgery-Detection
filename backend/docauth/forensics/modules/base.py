@@ -20,8 +20,8 @@ CURVES: dict[str, tuple[float | None, float]] = {
     "jpeg": (2.3, 2.0),
     "copymove": (3.0, 3.0),
     "template": (1.0, 3.0),
-    "cnn": (None, 10.0),
-    "segmentation": (None, 9.0),
+    "cnn": (None, 1.0),  # deep modules: evidence is in log-odds units
+    "segmentation": (None, 1.0),
 }
 
 
