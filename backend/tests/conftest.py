@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import time
 from pathlib import Path
 
@@ -9,6 +10,9 @@ from fastapi.testclient import TestClient
 from docauth import synth
 from docauth.app import create_app
 from docauth.config import Settings
+
+# identical synthetic documents on Windows, Linux and macOS (system fonts differ)
+os.environ.setdefault("DOCAUTH_SYNTH_FONTS", "builtin")
 
 ADMIN_EMAIL = "admin@example.com"
 ADMIN_PASSWORD = "admin-pass-123"  # test-only credential

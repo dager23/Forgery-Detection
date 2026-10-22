@@ -111,6 +111,10 @@ CITIES = [
 
 @lru_cache
 def font_files() -> list[str]:
+    """System fonts to vary the documents with. ``DOCAUTH_SYNTH_FONTS=builtin`` uses only Pillow's
+    bundled font, so tests render identical documents on every operating system."""
+    if os.environ.get("DOCAUTH_SYNTH_FONTS") == "builtin":
+        return []
     dirs = [
         os.path.join(os.environ.get("WINDIR", "C:/Windows"), "Fonts"),
         "/usr/share/fonts",

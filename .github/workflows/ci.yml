@@ -14,10 +14,9 @@ jobs:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: backend/pyproject.toml
-      - name: Fonts for the synthetic document generator
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends fonts-dejavu-core fonts-liberation
       - name: Install
-        run: pip install -e "backend[dev]"
+        # the annotate plugin turns failing tests into check annotations readable on the PR/commit
+        run: pip install -e "backend[dev]" pytest-github-actions-annotate-failures
       - name: Lint
         run: |
           ruff check backend ml
