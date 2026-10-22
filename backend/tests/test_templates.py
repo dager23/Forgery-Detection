@@ -115,5 +115,5 @@ def test_auto_template_detection(client, admin_token, user_token):
     )
     body = wait_done(client, r.json()["id"], bearer(user_token))
     tm = next(m for m in body["result"]["modules"] if m["key"] == "template")
-    assert tm["status"] == "ok"
+    assert tm["status"] == "ok", (tm["summary"], tm["metrics"], body["template_id"])
     assert body["result"]["template"]["auto_selected"] is True
